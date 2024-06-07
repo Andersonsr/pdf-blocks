@@ -1,5 +1,4 @@
 import glob
-
 from PIL import Image
 import img2pdf
 

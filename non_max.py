@@ -7,7 +7,7 @@ from detectron2.structures.boxes import Boxes
 import torch
 from detectron2.utils.visualizer import ColorMode, Visualizer
 from detectron2.data import MetadataCatalog
-from ditod import add_vit_config
+from VGT.object_detection.ditod import add_vit_config
 from detectron2.config import get_cfg
 from labels import labels
 

@@ -1,4 +1,10 @@
 .idea
+VGT/
+layoutlm-base-uncased/
+mmocr/
+pdfs/
+result/
+weights/
 inference.py
 pdf2img.py
 teste_path.py

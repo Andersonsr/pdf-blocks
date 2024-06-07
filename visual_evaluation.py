@@ -4,7 +4,7 @@ from labels import labels
 import cv2
 from detectron2.utils.visualizer import ColorMode, Visualizer
 import os
-from ditod import add_vit_config
+from VGT.object_detection.ditod import add_vit_config
 from detectron2.config import get_cfg
 from detectron2.data import MetadataCatalog
 import cv2

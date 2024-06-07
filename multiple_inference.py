@@ -6,17 +6,16 @@ import pdf2image
 import torch
 import cv2
 from create_grid import return_word_grid, select_tokenizer, create_grid_dict, create_mmocr_grid
-from ditod import add_vit_config
+from VGT.object_detection.ditod import add_vit_config
 from detectron2.config import get_cfg
 from detectron2.utils.visualizer import ColorMode, Visualizer
 from detectron2.data import MetadataCatalog
-from ditod.VGTTrainer import DefaultPredictor
+from VGT.object_detection.ditod.VGTTrainer import DefaultPredictor
 from mmocr.apis import MMOCRInferencer
 from non_max import non_maximum_suppression
 from lxml import etree
 import pytesseract
 from labels import labels
-
 
 
 def pdf_to_images(filename, dpi, experiment):
@@ -66,7 +65,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='script to run VGT on pdf')
     parser.add_argument('--root',
                         type=str,
-                        default='pdfs/multfig/',
+                        default='pdfs/',
                         help='root directory containing pdf files')
 
     parser.add_argument('--dataset',
@@ -98,7 +97,7 @@ if __name__ == '__main__':
                         '-n',
                         help='experiment name, output folder name',
                         type=str,
-                        default='xml-test-multfig')
+                        default='xml-test')
 
     parser.add_argument('--grid',
                         help='ocr used for creating grids',

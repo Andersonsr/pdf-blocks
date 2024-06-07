@@ -26,7 +26,7 @@ def hungarian_matching(figs, texts):
 
 
 if __name__ == '__main__':
-    path = 'xml-test-multfig/AAPG Memoir 77_Colour Guide to the Petrography of Carbonate Rocks_Schole & Schole_2003/output.xml'
+    path = 'result/xml-test-multfig/AAPG Memoir 77_Colour Guide to the Petrography of Carbonate Rocks_Schole & Schole_2003/output.xml'
     page = 17
     root = etree.parse(path).getroot()
     figs = root.xpath(f"//page[@number='{page}']/item[@type='image']")
