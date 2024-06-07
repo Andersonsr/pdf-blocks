@@ -144,11 +144,9 @@ if __name__ == '__main__':
         inputs = []
         for pdf in pdfs:
             pdf_name = os.path.basename(pdf).split('.')[0]
-            inputs.append(os.path.join(args.name, pdf_name, 'pages'))
-
-        for image_dir in inputs:
-            images = glob.glob(os.path.join(image_dir, '*.*'))
-
+            images = glob.glob(os.path.join(args.name, pdf_name, 'pages', '*.*'))
+            # sort by page number
+            images = sorted(images, key=lambda x: int(x.split('_')[-1].split('.')[0]))
             for i, image_path in enumerate(images):
                 img = cv2.imread(image_path)
                 grid = os.path.join(*image_path.split('/')[:-2], 'grids', os.path.basename(image_path).split('.')[0]+'.pkl')
@@ -230,6 +228,6 @@ if __name__ == '__main__':
                     tree = etree.ElementTree(root)
                     tree.write(xml_path, pretty_print=True, xml_declaration=True)
 
-            print("Finished processing {}".format(os.path.dirname(image_dir)))
+            print("Finished processing {}".format(os.path.dirname(pdf_name)))
     else:
         print('Root directory does not exist: {}'.format(args.root))
