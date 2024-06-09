@@ -8,12 +8,12 @@ import pytesseract
 import fitz
 
 
-def extract_text(pdf, page_num, bbox):
-    document = fitz.open(pdf)
+def extract_text(pdf_path, page_num, bbox):
+    document = fitz.open(pdf_path)
     page = document[page_num]
     w = page.rect.width
     h = page.rect.height
-    print(f'fitz height and width: {h} and {w}')
+    # print(f'fitz height and width: {h} and {w}')
     bbox = [bbox[0]*w, bbox[1]*h, bbox[2]*w, bbox[3]*h]
 
     words = page.get_text("words")
@@ -21,18 +21,18 @@ def extract_text(pdf, page_num, bbox):
     result_string = ''
     for word in words:
         result_string += word[4] + ' '
-    return result_string, page.get_textbox(bbox)
+    return result_string
 
 
 if __name__ == '__main__':
-    pdf = 'pdfs/AAPG.pdf'
-    xml_path = 'result/xml-test-multfig/AAPG/output.xml'
-    page_num = 19
-    block_num = 5
+    pdf = 'pdfs/scan/Adams Atlas of Sedimentary Rocks.pdf'
+    xml_path = 'result/xml-test-scan-mmocr/Adams Atlas of Sedimentary Rocks/output.xml'
+    page_num = 6
+    block_num = 0
     root = etree.parse(xml_path).getroot()
     block = root.xpath(f"//page[@number='{page_num}']/item[@block='{block_num}']")[0]
 
-    page_png = cv2.imread('result/xml-test-multfig/AAPG/pages/page_19.png')
+    page_png = cv2.imread('result/xml-test-scan-mmocr/Adams Atlas of Sedimentary Rocks/pages/page_6.png')
     h, w = page_png.shape[:2]
     print(f'original height and width: {h} {w}')
 
@@ -41,10 +41,9 @@ if __name__ == '__main__':
             int(block.get('x1')) / w,
             int(block.get('y1')) / h]
 
-    text1, text2 = extract_text(pdf, page_num, bbox)
-
+    text1 = extract_text(pdf, page_num, bbox)
+    if text1 == '':
+        print('No text found')
     print('')
     print(text1)
-    print()
-    print(text2)
 

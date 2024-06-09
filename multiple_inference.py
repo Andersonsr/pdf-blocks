@@ -5,6 +5,7 @@ import pickle
 import pdf2image
 import torch
 import cv2
+from text_extraction import extract_text
 from create_grid import return_word_grid, select_tokenizer, create_grid_dict, create_mmocr_grid
 from VGT.object_detection.ditod import add_vit_config
 from detectron2.config import get_cfg
@@ -65,7 +66,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='script to run VGT on pdf')
     parser.add_argument('--root',
                         type=str,
-                        default='pdfs/',
+                        default='pdfs/scan',
                         help='root directory containing pdf files')
 
     parser.add_argument('--dataset',
@@ -97,12 +98,12 @@ if __name__ == '__main__':
                         '-n',
                         help='experiment name, output folder name',
                         type=str,
-                        default='xml-test')
+                        default='xml-test-scan-mmocr')
 
     parser.add_argument('--grid',
                         help='ocr used for creating grids',
                         type=str,
-                        default='pdfplumber')
+                        default='mmocr')
     args = parser.parse_args()
 
     pdfs = glob.glob(os.path.join(args.root, '*.pdf'))
@@ -207,7 +208,11 @@ if __name__ == '__main__':
                         else: # text
                             crop_path = os.path.join(cropped_text_dir, f'{page}_box{j}.png')
                             cv2.imwrite(crop_path, figure)
-                            element_text = pytesseract.image_to_string(crop_path)
+                            h, w = img.shape[:2]
+                            bbox = [x1/w, y1/h, x2/w, y2/h]
+                            element_text = extract_text(pdf, int(page.split('_')[-1]), bbox)
+                            if element_text == '':
+                                element_text = pytesseract.image_to_string(crop_path)
                             box_type = 'text'
                             sub_type = labels[args.dataset][output[j].pred_classes.item()]
 
