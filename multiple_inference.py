@@ -16,6 +16,7 @@ from mmocr.apis import MMOCRInferencer
 from non_max import non_maximum_suppression
 from lxml import etree
 import pytesseract
+from tqdm import tqdm
 from labels import labels
 
 
@@ -52,13 +53,13 @@ def pdf_to_grids(filename, tokenizer, experiment):
     word_grid = return_word_grid(filename)
     tokenizer = select_tokenizer(tokenizer)
 
-    for page in range(len(word_grid)):
+    for i in range(len(word_grid)):
         try:
-            grid = create_grid_dict(tokenizer, word_grid[page])
-            with open(os.path.join(dirname, f'page_{page}.pkl'), 'wb') as file:
+            grid = create_grid_dict(tokenizer, word_grid[i])
+            with open(os.path.join(dirname, f'page_{i}.pkl'), 'wb') as file:
                 pickle.dump(grid, file)
         except IndexError:
-            print('error in ' + word_grid[page])
+            print('error in ' + word_grid[i])
             pass
 
 
@@ -66,44 +67,50 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='script to run VGT on pdf')
     parser.add_argument('--root',
                         type=str,
-                        default='pdfs/scan',
-                        help='root directory containing pdf files')
+                        default='pdfs/AAPG-77',
+                        help='path to input directory')
 
     parser.add_argument('--dataset',
                         type=str,
                         default='doclaynet',
-                        help='pretrain dataset name')
+                        help='pretrain dataset name: doclaynet or publaynet')
 
     parser.add_argument('--tokenizer',
                         type=str,
                         default='google-bert/bert-base-uncased',
                         help='tokenizer')
 
-    parser.add_argument("--opts",
-                        help="Modify config options using the command-line 'KEY VALUE' pairs",
-                        default=[],
-                        nargs=argparse.REMAINDER)
-
     parser.add_argument('--cfg',
                         help='cfg file path',
                         type=str,
                         default='configs/cascade/doclaynet_VGT_cascade_PTM.yaml')
+
+    parser.add_argument("--opts",
+                        help="Modify cfg options using the command-line 'KEY VALUE' pairs",
+                        default=[],
+                        nargs=argparse.REMAINDER)
 
     parser.add_argument('--dpi',
                         help='pdf conversion resolution',
                         type=int,
                         default=200)
 
-    parser.add_argument('--name',
-                        '-n',
-                        help='experiment name, output folder name',
+    parser.add_argument('--output',
+                        '-o',
+                        help='output folder name',
                         type=str,
-                        default='xml-test-scan-mmocr')
+                        default='result/AAPG-ALL')
 
     parser.add_argument('--grid',
-                        help='ocr used for creating grids',
+                        help='tool used for creating grids: pdfplumber or mmocr',
                         type=str,
-                        default='mmocr')
+                        default='pdfplumber')
+
+    parser.add_argument('--ocr',
+                        help='text extraction tool to use: mupdf, tesseract, or auto',
+                        type=str,
+                        default='mupdf')
+
     args = parser.parse_args()
 
     pdfs = glob.glob(os.path.join(args.root, '*.pdf'))
@@ -114,15 +121,16 @@ if __name__ == '__main__':
         # Step 0: pdf preprocessing
         print('pre-processing files...')
         for pdf_path in pdfs:
-            pdf_to_images(pdf_path, args.dpi, args.name)
+            pdf_to_images(pdf_path, args.dpi, args.output)
             if args.grid == 'pdfplumber':
-                pdf_to_grids(pdf_path, args.tokenizer, args.name)
+                pdf_to_grids(pdf_path, args.tokenizer, args.output)
 
         if args.grid == 'mmocr':
             infer = MMOCRInferencer(det='dbnetpp', rec='svtr-small')
             for pdf_path in pdfs:
                 pdf_name = os.path.basename(pdf_path).split('.')[0]
-                for image in glob.glob(os.path.join(args.name, pdf_name, 'pages', '*.png')):
+                for i, image in enumerate(tqdm(
+                        glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.png')))):
                     image_to_grids(image, args.tokenizer, infer)
 
         # Step 1: instantiate config
@@ -143,12 +151,12 @@ if __name__ == '__main__':
         # Step 6: run inference
 
         inputs = []
-        for pdf in pdfs:
+        for pdf_i, pdf in enumerate(pdfs):
             pdf_name = os.path.basename(pdf).split('.')[0]
-            images = glob.glob(os.path.join(args.name, pdf_name, 'pages', '*.*'))
+            images = glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.*'))
             # sort by page number
             images = sorted(images, key=lambda x: int(x.split('_')[-1].split('.')[0]))
-            for i, image_path in enumerate(images):
+            for i, image_path in enumerate(tqdm(images)):
                 img = cv2.imread(image_path)
                 grid = os.path.join(*image_path.split('/')[:-2], 'grids', os.path.basename(image_path).split('.')[0]+'.pkl')
                 page = image_path.split('/')[-1].split('.')[0]
@@ -193,16 +201,19 @@ if __name__ == '__main__':
                         y2 = int(output[j].pred_boxes.tensor.squeeze()[3].item())
                         figure = img[y1:y2, x1:x2, :]
 
-                        if output[j].pred_classes.item() in [4, 6]:
+                        image_label = {'doclaynet': 6, 'publaynet': 4}
+                        table_label = {'doclaynet': 8, 'publaynet': 3}
+
+                        if output[j].pred_classes.item() == image_label[args.dataset]:
                             crop_path = os.path.join(cropped_image_dir, f'{page}_box{j}.png')
                             cv2.imwrite(crop_path, figure)
                             box_type = 'image'
                             sub_type = ''
                             element_text = crop_path
 
-                        elif output[j].pred_classes.item() in [3, 8]:
-                            box_type='table'
-                            sub_type=''
+                        elif output[j].pred_classes.item() == table_label[args.dataset]:
+                            box_type = 'table'
+                            sub_type = ''
                             element_text = ''
 
                         else: # text
@@ -210,9 +221,19 @@ if __name__ == '__main__':
                             cv2.imwrite(crop_path, figure)
                             h, w = img.shape[:2]
                             bbox = [x1/w, y1/h, x2/w, y2/h]
-                            element_text = extract_text(pdf, int(page.split('_')[-1]), bbox)
-                            if element_text == '':
+
+                            if args.ocr == 'mupdf':
+                                element_text = extract_text(pdf, int(page.split('_')[-1]), bbox)
+
+                            elif args.ocr == 'tesseract':
                                 element_text = pytesseract.image_to_string(crop_path)
+
+                            # try extraction first if empty use tesseract
+                            elif args.ocr == 'auto':
+                                element_text = extract_text(pdf, int(page.split('_')[-1]), bbox)
+                                if element_text == '':
+                                    element_text = pytesseract.image_to_string(crop_path)
+
                             box_type = 'text'
                             sub_type = labels[args.dataset][output[j].pred_classes.item()]
 
@@ -225,7 +246,8 @@ if __name__ == '__main__':
                                                      y0=str(y1),
                                                      x1=str(x2),
                                                      y1=str(y2),)
-                        item_element.text = element_text
+
+                        item_element.text = element_text if element_text is not None else ''
                         page_element.append(item_element)
 
                     # save to xml
@@ -233,6 +255,5 @@ if __name__ == '__main__':
                     tree = etree.ElementTree(root)
                     tree.write(xml_path, pretty_print=True, xml_declaration=True)
 
-            print("Finished processing {}".format(os.path.dirname(pdf_name)))
     else:
         print('Root directory does not exist: {}'.format(args.root))
