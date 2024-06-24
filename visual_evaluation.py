@@ -64,7 +64,7 @@ if __name__ == '__main__':
     cfg = get_cfg()
     add_vit_config(cfg)
     cfg.merge_from_file('configs/cascade/doclaynet_VGT_cascade_PTM.yaml')
-    files = glob.glob('result/AAPG-all/3 Rock Fragments/pages/*')
+    files = glob.glob('result/AAPG-ALL/AAPG Memoir 77/pages/*')
     dataset = 'doclaynet'
     interesting_label = ''
 

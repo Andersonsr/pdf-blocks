@@ -6,12 +6,12 @@ pdfs/
 result/
 __pycache__
 weights/
+images/
+dataset
 inference.py
+gray_scale.py
 pdf2img.py
 teste_path.py
 train_VGT.py
 plot_metadata.py
-dataset_generation.py
-images/
-dataset
-
+final_dataset.py

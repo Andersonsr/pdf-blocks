@@ -26,6 +26,6 @@ if __name__ == '__main__':
     os.makedirs('dataset/pairs/', exist_ok=True)
     for i, row in df.iterrows():
         # print(row[1], row[2])
-        origin = os.path.basename(row['image']).split('_')[0]
-        pair_visualization(row['image'], row['text'], f'dataset/pairs/{origin}_pair_{i}.png')
+        origin = os.path.basename(row['image'])
+        pair_visualization(row['image'], row['text'], f'dataset/pairs/{origin}')
 
