@@ -58,17 +58,17 @@ if __name__ == '__main__':
                     image_path = os.path.join(working_dir, 'cropped_image',
                                               'page_{}_box{}.png'.format(j, images[fig_i].get('block')))
                     text_path = os.path.join(working_dir, 'cropped_text',
-                                             'page_{}_box{}.png'.format(j, texts[text_i].get('block')))
+                                             'page_{}_box{}.png'.format(j, texts_filtered[text_i].get('block')))
 
                     img_dst = os.path.join(args.output_dir, 'images',
                                            '{}_{}_{}.png'.format(os.path.basename(working_dir), j, images[fig_i].get('block')))
                     txt_dst = os.path.join(args.output_dir, 'texts',
-                                           '{}_{}_{}.png'.format(os.path.basename(working_dir), j, texts[text_i].get('block')))
+                                           '{}_{}_{}.png'.format(os.path.basename(working_dir), j, texts_filtered[text_i].get('block')))
 
                     shutil.copy2(image_path, img_dst)
                     shutil.copy2(text_path, txt_dst)
 
-                    output['gt_text'].append(texts[text_i].text)
+                    output['gt_text'].append(texts_filtered[text_i].text)
                     output['image'].append(img_dst)
                     output['text'].append(txt_dst)
 

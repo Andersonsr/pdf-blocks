@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import glob
 import os.path
 import cv2
@@ -8,11 +9,12 @@ import cv2 as cv
 
 if __name__ == '__main__':
     df = pd.read_excel('dataset/dataset.xlsx', )
-    z = 5
+    z = 4
     indices_to_keep = np.array([True for i in range(df.shape[0])])
     os.makedirs(f'dataset/out-MAD-{z}', exist_ok=True)
+    inputs = glob.glob('result/AAPG-ALL/*')
 
-    for pdf in glob.glob('result/AAPG-ALL/*'):
+    for pdf in tqdm(inputs, total=len(inputs)):
         heights = []
         widths = []
         indices = []
@@ -33,7 +35,6 @@ if __name__ == '__main__':
         max_h = np.median(heights) + np.median([np.absolute(hi - np.median(heights)) for hi in heights]) * 1.4826 * z
 
         out = 0
-        inner = 0
 
         for i, h, w in zip(indices, heights, widths):
             name = os.path.basename(df.iloc[i]['image'])
@@ -44,11 +45,11 @@ if __name__ == '__main__':
                 out += 1
                 indices_to_keep[i] = False
 
-        print(os.path.basename(pdf))
-        print(f'keep: {inner}, remove: {out}')
-        print(f'width deviation threshold: {(max_w - min_w)/2}, height deviation threshold: {(max_h - min_h)/2}')
+        # print(os.path.basename(pdf))
+        # print(f'keep: {len(indices) - out}, remove: {out}')
+        # print(f'width threshold: {(max_w - min_w)/2}, height threshold: {(max_h - min_h)/2}')
 
     # remove outliers
     df = df.iloc[indices_to_keep]
-    print(f'removed pairs: {len(indices_to_keep) - df.shape[0]}')
+    print(f'total removed pairs: {len(indices_to_keep) - df.shape[0]}')
     df.to_excel('dataset/dataset_MAD.xlsx')

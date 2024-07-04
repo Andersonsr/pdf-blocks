@@ -111,6 +111,21 @@ if __name__ == '__main__':
                         type=str,
                         default='mupdf')
 
+    parser.add_argument('--expand',
+                        help='expand bounding box by this value',
+                        default=5,
+                        type=int)
+
+    parser.add_argument('--preprocessed',
+                        action='store_true',
+                        help='use this to skip the preprocessing',
+                        default=False)
+
+    parser.add_argument('--preprocess_only',
+                        action='store_true',
+                        default=False,
+                        help='preprocess pdfs to run inference later')
+
     args = parser.parse_args()
     assert os.path.isdir(args.root), 'The root directory does not exist'
     pdfs = glob.glob(os.path.join(args.root, '*.pdf'))
@@ -118,20 +133,23 @@ if __name__ == '__main__':
     inputs = list()
 
     # Step 0: pdf preprocessing
-    print('pre-processing files...')
-    for pdf_path in pdfs:
-        pdf_to_images(pdf_path, args.dpi, args.output)
+    if not args.preprocessed:
+        print('pre-processing PDFs...')
         if args.grid == 'pdfplumber':
-            pdf_to_grids(pdf_path, args.tokenizer, args.output)
+            for pdf_path in tqdm(pdfs):
+                pdf_to_images(pdf_path, args.dpi, args.output)
+                pdf_to_grids(pdf_path, args.tokenizer, args.output)
 
-    if args.grid == 'mmocr':
-        infer = MMOCRInferencer(det='dbnetpp', rec='svtr-small')
-        for pdf_path in pdfs:
-            pdf_name = os.path.basename(pdf_path).split('.')[0]
-            for i, image in enumerate(tqdm(
-                    glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.png')))):
-                image_to_grids(image, args.tokenizer, infer)
+        elif args.grid == 'mmocr':
+            infer = MMOCRInferencer(det='dbnetpp', rec='svtr-small')
+            for pdf_path in tqdm(pdfs):
+                pdf_to_images(pdf_path, args.dpi, args.output)
+                pdf_name = os.path.basename(pdf_path).split('.')[0]
+                for i, image in enumerate(tqdm(
+                        glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.png')))):
+                    image_to_grids(image, args.tokenizer, infer)
 
+    assert not args.preprocess_only, 'skipping inference'
     # Step 1: instantiate config
     cfg = get_cfg()
     add_vit_config(cfg)
@@ -155,6 +173,7 @@ if __name__ == '__main__':
         images = glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.*'))
         # sort by page number
         images = sorted(images, key=lambda x: int(x.split('_')[-1].split('.')[0]))
+        print(f'processing pdf {pdf_i + 1} out of {len(pdfs)} ')
         for i, image_path in enumerate(tqdm(images)):
             img = cv2.imread(image_path)
             grid = os.path.join(*image_path.split('/')[:-2], 'grids', os.path.basename(image_path).split('.')[0]+'.pkl')
@@ -180,7 +199,7 @@ if __name__ == '__main__':
                     os.makedirs(os.path.dirname(output_path))
                 pickle.dump(output, open(output_path, 'wb'))
 
-                # prepare folders to cropped bounding boxes from each page
+                # prepare folders to store cropped bounding boxes from each page
                 cropped_image_dir = os.path.join(*image_path.split('/')[:-2], 'cropped_image')
                 if not os.path.exists(cropped_image_dir):
                     os.makedirs(cropped_image_dir)
@@ -198,12 +217,12 @@ if __name__ == '__main__':
                     y1 = int(output[j].pred_boxes.tensor.squeeze()[1].item())
                     x2 = int(output[j].pred_boxes.tensor.squeeze()[2].item())
                     y2 = int(output[j].pred_boxes.tensor.squeeze()[3].item())
-                    figure = img[y1:y2, x1:x2, :]
 
                     image_label = {'doclaynet': 6, 'publaynet': 4}
                     table_label = {'doclaynet': 8, 'publaynet': 3}
 
                     if output[j].pred_classes.item() == image_label[args.dataset]:
+                        figure = img[y1:y2, x1:x2, :]
                         crop_path = os.path.join(cropped_image_dir, f'{page}_box{j}.png')
                         cv2.imwrite(crop_path, figure)
                         box_type = 'image'
@@ -216,18 +235,24 @@ if __name__ == '__main__':
                         element_text = ''
 
                     else: # text
+                        h, w = img.shape[:2]
+                        figure = img[max(y1-args.expand, 0): min(y2+args.expand, h),
+                                     max(x1-args.expand, 0): min(x2+args.expand, w),
+                                     :]
+
                         crop_path = os.path.join(cropped_text_dir, f'{page}_box{j}.png')
                         cv2.imwrite(crop_path, figure)
-                        h, w = img.shape[:2]
+
+                        # [x1, y1, x2, y2] expands each bbox border by 5px
                         bbox = [x1/w, y1/h, x2/w, y2/h]
 
                         if args.ocr == 'mupdf':
-                            element_text = extract_text(pdf, int(page.split('_')[-1]), bbox)
+                            element_text = extract_text(pdf, int(page.split('_')[-1]), bbox, args.expand)
 
                         elif args.ocr == 'tesseract':
                             element_text = pytesseract.image_to_string(crop_path)
 
-                        # try extraction first if empty use tesseract
+                        # try direct extraction from PDF if empty use tesseract OCR
                         elif args.ocr == 'auto':
                             element_text = extract_text(pdf, int(page.split('_')[-1]), bbox)
                             if element_text == '':

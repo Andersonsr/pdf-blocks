@@ -22,10 +22,10 @@ def pair_visualization(fig_path, text_path, save_path):
 
 
 if __name__ == '__main__':
-    df = pd.read_excel('dataset/dataset.xlsx')
-    os.makedirs('dataset/pairs/', exist_ok=True)
+    df = pd.read_excel('dataset-5e/dataset.xlsx')
+    os.makedirs('dataset-5e/pairs/', exist_ok=True)
     for i, row in df.iterrows():
         # print(row[1], row[2])
         origin = os.path.basename(row['image'])
-        pair_visualization(row['image'], row['text'], f'dataset/pairs/{origin}')
+        pair_visualization(row['image'], row['text'], f'dataset-5e/pairs/{origin}')
 
