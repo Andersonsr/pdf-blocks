@@ -41,7 +41,7 @@ if __name__ == '__main__':
     root = etree.parse(xml_path).getroot()
     block = root.xpath(f"//page[@number='{page_num}']/item[@block='{block_num}']")[0]
 
-    page_png = cv2.imread('result/AAPG-5E/3 Rock Fragments/pages/page_6.png')
+    page_png = cv2.imread('result/AAPG-ALL/3 Rock Fragments/pages/page_6.png')
     h, w = page_png.shape[:2]
     print(f'original height and width: {h} {w}')
 
