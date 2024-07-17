@@ -10,6 +10,7 @@ from detectron2.data import MetadataCatalog
 import cv2
 import glob
 from non_max import non_maximum_suppression
+from tqdm import tqdm
 
 
 def save_result(image_path, conf, classes, threshold):
@@ -18,35 +19,36 @@ def save_result(image_path, conf, classes, threshold):
     md.set(thing_classes=classes)
     page = os.path.basename(image_path)
     trailing = image_path.split('/')[:-2]
-    output_path = os.path.join(*trailing, 'outputs', page).split('.')[0] + '.pkl'
-    output = pickle.load(open(output_path, 'rb'))
-    output = non_maximum_suppression(output, threshold)
+    output_path = os.path.join(*trailing, 'outputs', page).split('.png')[0] + '.pkl'
 
-    v = Visualizer(img[:, :, ::-1],
-                   md,
-                   scale=1.0,
-                   instance_mode=ColorMode.SEGMENTATION)
-    result_image = v.draw_instance_predictions(output.to("cpu"))
-    result_image = result_image.get_image()[:, :, ::-1]
-    result_path = os.path.join(*trailing, 'result_visualize', page)
+    if os.path.exists(output_path):
+        output = pickle.load(open(output_path, 'rb'))
+        output = non_maximum_suppression(output, threshold)
 
-    if not os.path.exists(os.path.dirname(result_path)):
-        os.makedirs(os.path.dirname(result_path))
-    cv2.imwrite(result_path, result_image)
+        v = Visualizer(img[:, :, ::-1],
+                       md,
+                       scale=1.0,
+                       instance_mode=ColorMode.SEGMENTATION)
+        result_image = v.draw_instance_predictions(output.to("cpu"))
+        result_image = result_image.get_image()[:, :, ::-1]
+        result_path = os.path.join(*trailing, 'result_visualize', page)
+
+        if not os.path.exists(os.path.dirname(result_path)):
+            os.makedirs(os.path.dirname(result_path))
+        cv2.imwrite(result_path, result_image)
 
 
 def extract_bbox(image_path, label, threshold, interesting_label):
     img = cv2.imread(image_path)
     page = os.path.basename(image_path)
     trailing = image_path.split('/')[:-2]
-    output_path = os.path.join(*trailing, 'outputs', page).split('.')[0] + '.pkl'
+    output_path = os.path.join(*trailing, 'outputs', page).split('.pdf')[0] + '.pkl'
     output = pickle.load(open(output_path, 'rb'))
     output = non_maximum_suppression(output, threshold)
 
     for i in range(len(output)):
         # print(output[i])
         if output[i].pred_classes.item() == label:
-
             x1 = int(output[i].pred_boxes.tensor.squeeze()[0].item())
             y1 = int(output[i].pred_boxes.tensor.squeeze()[1].item())
             x2 = int(output[i].pred_boxes.tensor.squeeze()[2].item())
@@ -64,7 +66,7 @@ if __name__ == '__main__':
     cfg = get_cfg()
     add_vit_config(cfg)
     cfg.merge_from_file('configs/cascade/doclaynet_VGT_cascade_PTM.yaml')
-    files = glob.glob('result/AAPG-ALL/AAPG Memoir 77/pages/*')
+    files = glob.glob('result/micro-regis-plumber/*/pages/*')
     dataset = 'doclaynet'
     interesting_label = ''
 
@@ -80,16 +82,8 @@ if __name__ == '__main__':
     }
 
     print('processing...')
-    i = 0
-    for path in files:
-        # extract_bbox(path, labels[dataset].index(img_classes[dataset]), 0.2, 'image')
-        # extract_bbox(path, labels[dataset].index(txt_classes[dataset]), 0.2, 'text')
-
+    for path in tqdm(files, total=len(files)):
         save_result(path, cfg, labels[dataset], 0.2)
-        if i % 100 == 99:
-            print('Processed {} pages'.format(i+1))
-
-        i += 1
     print('Done!')
 
 

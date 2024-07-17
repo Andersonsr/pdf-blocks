@@ -21,7 +21,7 @@ from labels import labels
 
 
 def pdf_to_images(filename, dpi, experiment):
-    pdf_name = os.path.basename(filename).split('.')[0]
+    pdf_name = os.path.basename(filename).split('.pdf')[0]
     dirname = os.path.join(experiment, pdf_name, 'pages')
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -36,38 +36,36 @@ def image_to_grids(image_path, tokenizer, inferencer):
     result = inferencer(image_path, return_vis=False)
     tokenizer = select_tokenizer(tokenizer)
     grid = create_mmocr_grid(tokenizer, result)
-    save_path = os.path.join(*image_path.split('/')[:-2], 'grids', os.path.basename(image_path).split('.')[0] + '.pkl')
-    if not os.path.exists(os.path.dirname(save_path)):
-        os.makedirs(os.path.dirname(save_path))
-    with open(save_path, 'wb') as file:
-        pickle.dump(grid, file)
+    if grid is not None:
+        save_path = os.path.join(*image_path.split('/')[:-2], 'grids', os.path.basename(image_path).split('.')[0] + '.pkl')
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path))
+        with open(save_path, 'wb') as file:
+            pickle.dump(grid, file)
 
 
 def pdf_to_grids(filename, tokenizer, experiment):
-    pdf_name = os.path.basename(filename).split('.')[0]
+
+
+    pdf_name = os.path.basename(filename).split('.pdf')[0]
     dirname = os.path.join(experiment, pdf_name, 'grids')
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
-    # print(f'gen {filename}')
     word_grid = return_word_grid(filename)
     tokenizer = select_tokenizer(tokenizer)
-
     for i in range(len(word_grid)):
-        try:
-            grid = create_grid_dict(tokenizer, word_grid[i])
+        grid = create_grid_dict(tokenizer, word_grid[i])
+        if grid is not None:
             with open(os.path.join(dirname, f'page_{i}.pkl'), 'wb') as file:
                 pickle.dump(grid, file)
-        except IndexError:
-            print('error in ' + word_grid[i])
-            pass
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='script to run VGT on pdf')
     parser.add_argument('--root',
                         type=str,
-                        default='pdfs/AAPG-109',
+                        default='pdfs/AAPG-ALL',
                         help='path to input directory')
 
     parser.add_argument('--dataset',
@@ -99,7 +97,7 @@ if __name__ == '__main__':
                         '-o',
                         help='output folder name',
                         type=str,
-                        default='result/test')
+                        default='result/AAPG-ALL')
 
     parser.add_argument('--grid',
                         help='tool used for creating grids: pdfplumber or mmocr',
@@ -109,7 +107,7 @@ if __name__ == '__main__':
     parser.add_argument('--ocr',
                         help='text extraction tool to use: mupdf, tesseract, or auto',
                         type=str,
-                        default='mupdf')
+                        default='auto')
 
     parser.add_argument('--expand',
                         help='expand bounding box by this value',
@@ -126,30 +124,36 @@ if __name__ == '__main__':
                         default=False,
                         help='preprocess pdfs to run inference later')
 
+    parser.add_argument('--skip_preprocess',
+                        action='store_true',
+                        default=False,
+                        help='skip preprocess')
+
     args = parser.parse_args()
     assert os.path.isdir(args.root), 'The root directory does not exist'
     pdfs = glob.glob(os.path.join(args.root, '*.pdf'))
 
     inputs = list()
 
-    # Step 0: pdf preprocessing
-    if not args.preprocessed:
-        print('pre-processing PDFs...')
-        if args.grid == 'pdfplumber':
-            for pdf_path in tqdm(pdfs):
-                pdf_to_images(pdf_path, args.dpi, args.output)
-                pdf_to_grids(pdf_path, args.tokenizer, args.output)
+    if not args.skip_preprocess:
+        # Step 0: pdf preprocessing
+        if not args.preprocessed:
+            print('pre-processing PDFs...')
+            if args.grid == 'pdfplumber':
+                for pdf_path in tqdm(pdfs):
+                    pdf_to_images(pdf_path, args.dpi, args.output)
+                    pdf_to_grids(pdf_path, args.tokenizer, args.output)
 
-        elif args.grid == 'mmocr':
-            infer = MMOCRInferencer(det='dbnetpp', rec='svtr-small')
-            for pdf_path in tqdm(pdfs):
-                pdf_to_images(pdf_path, args.dpi, args.output)
-                pdf_name = os.path.basename(pdf_path).split('.')[0]
-                for i, image in enumerate(tqdm(
-                        glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.png')))):
-                    image_to_grids(image, args.tokenizer, infer)
+            elif args.grid == 'mmocr':
+                infer = MMOCRInferencer(det='dbnetpp', rec='svtr-small')
+                for pdf_path in tqdm(pdfs):
+                    pdf_to_images(pdf_path, args.dpi, args.output)
+                    pdf_name = os.path.basename(pdf_path).split('.pdf')[0]
+                    for i, image in enumerate(glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.png'))):
+                        image_to_grids(image, args.tokenizer, infer)
 
     assert not args.preprocess_only, 'skipping inference'
+
     # Step 1: instantiate config
     cfg = get_cfg()
     add_vit_config(cfg)
@@ -169,11 +173,12 @@ if __name__ == '__main__':
 
     inputs = []
     for pdf_i, pdf in enumerate(pdfs):
-        pdf_name = os.path.basename(pdf).split('.')[0]
+        pdf_name = os.path.basename(pdf).split('.pdf')[0]
         images = glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.*'))
         # sort by page number
         images = sorted(images, key=lambda x: int(x.split('_')[-1].split('.')[0]))
         print(f'processing pdf {pdf_i + 1} out of {len(pdfs)} ')
+        print(pdf_name)
         for i, image_path in enumerate(tqdm(images)):
             img = cv2.imread(image_path)
             grid = os.path.join(*image_path.split('/')[:-2], 'grids', os.path.basename(image_path).split('.')[0]+'.pkl')
@@ -234,7 +239,8 @@ if __name__ == '__main__':
                         sub_type = ''
                         element_text = ''
 
-                    else: # text
+                    else:
+                        # text
                         h, w = img.shape[:2]
                         figure = img[max(y1-args.expand, 0): min(y2+args.expand, h),
                                      max(x1-args.expand, 0): min(x2+args.expand, w),
@@ -243,7 +249,7 @@ if __name__ == '__main__':
                         crop_path = os.path.join(cropped_text_dir, f'{page}_box{j}.png')
                         cv2.imwrite(crop_path, figure)
 
-                        # [x1, y1, x2, y2] expands each bbox border by 5px
+                        # [x1, y1, x2, y2]
                         bbox = [x1/w, y1/h, x2/w, y2/h]
 
                         if args.ocr == 'mupdf':
@@ -261,7 +267,7 @@ if __name__ == '__main__':
                         box_type = 'text'
                         sub_type = labels[args.dataset][output[j].pred_classes.item()]
 
-                    # write to xml
+                    # add item to xml
                     item_element = etree.Element("item",
                                                  block=str(j),
                                                  type=box_type,
@@ -274,7 +280,7 @@ if __name__ == '__main__':
                     item_element.text = element_text if element_text is not None else ''
                     page_element.append(item_element)
 
-                # save to xml
+                # save xml
                 root.append(page_element)
                 tree = etree.ElementTree(root)
                 tree.write(xml_path, pretty_print=True, xml_declaration=True)

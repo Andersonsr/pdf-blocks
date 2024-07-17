@@ -103,7 +103,11 @@ def create_mmocr_grid(tokenizer, page_data):
     for bbox in pred['det_polygons']:
         grid["bbox_texts_list"].append((bbox[2], bbox[3], bbox[7] - bbox[2], bbox[6] - bbox[3]))
 
+    if len(grid['texts']) == 0:
+        return None
+
     input_ids = tokenize(tokenizer, grid["texts"])
+
     grid["bbox_subword_list"] = np.array(
         readjust_bbox_coords(
             grid["bbox_texts_list"],
@@ -151,21 +155,16 @@ def create_grid_dict(tokenizer, page_data, ):
              ele["x1"]-ele["x0"],
              ele["bottom"]-ele["top"]))
 
-    input_ids = tokenize(tokenizer, grid["texts"])
+    if len(grid["texts"]) > 0:
+        input_ids = tokenize(tokenizer, grid["texts"])
 
-    # flatten the input_ids
-    grid["input_ids"] = np.concatenate(input_ids)
+        # flatten the input_ids
+        grid["input_ids"] = np.concatenate(input_ids)
+        grid["bbox_subword_list"] = np.array(readjust_bbox_coords(grid["bbox_texts_list"], input_ids))
+        grid["bbox_texts_list"] = np.array(grid["bbox_texts_list"])
+        return grid
 
-    grid["bbox_subword_list"] = np.array(
-        readjust_bbox_coords(
-            grid["bbox_texts_list"],
-            input_ids
-            )
-        )
-
-    grid["bbox_texts_list"] = np.array(grid["bbox_texts_list"])
-
-    return grid
+    return None
 
 
 def save_pkl_file(grid, output_dir, output_file, model="doclaynet"):
