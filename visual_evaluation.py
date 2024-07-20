@@ -18,8 +18,8 @@ def save_result(image_path, conf, classes, threshold):
     md = MetadataCatalog.get(conf.DATASETS.TEST[0])
     md.set(thing_classes=classes)
     page = os.path.basename(image_path)
-    trailing = image_path.split('/')[:-2]
-    output_path = os.path.join(*trailing, 'outputs', page).split('.png')[0] + '.pkl'
+    trailing = os.path.dirname(os.path.dirname(image_path))
+    output_path = os.path.join(trailing, 'outputs', page).split('.png')[0] + '.pkl'
 
     if os.path.exists(output_path):
         output = pickle.load(open(output_path, 'rb'))
@@ -31,7 +31,7 @@ def save_result(image_path, conf, classes, threshold):
                        instance_mode=ColorMode.SEGMENTATION)
         result_image = v.draw_instance_predictions(output.to("cpu"))
         result_image = result_image.get_image()[:, :, ::-1]
-        result_path = os.path.join(*trailing, 'result_visualize', page)
+        result_path = os.path.join(trailing, 'result_visualize', page)
 
         if not os.path.exists(os.path.dirname(result_path)):
             os.makedirs(os.path.dirname(result_path))
@@ -41,8 +41,8 @@ def save_result(image_path, conf, classes, threshold):
 def extract_bbox(image_path, label, threshold, interesting_label):
     img = cv2.imread(image_path)
     page = os.path.basename(image_path)
-    trailing = image_path.split('/')[:-2]
-    output_path = os.path.join(*trailing, 'outputs', page).split('.pdf')[0] + '.pkl'
+    trailing = trailing = os.path.dirname(os.path.dirname(image_path))
+    output_path = os.path.join(trailing, 'outputs', page).split('.pdf')[0] + '.pkl'
     output = pickle.load(open(output_path, 'rb'))
     output = non_maximum_suppression(output, threshold)
 
@@ -55,7 +55,7 @@ def extract_bbox(image_path, label, threshold, interesting_label):
             y2 = int(output[i].pred_boxes.tensor.squeeze()[3].item())
             figure = img[y1:y2, x1:x2, :]
             page_number = page.split('.')[0]
-            figure_path = os.path.join(*trailing, f'cropped_{interesting_label}', f'{page_number}_box{i}.png')
+            figure_path = os.path.join(trailing, f'cropped_{interesting_label}', f'{page_number}_box{i}.png')
             if not os.path.exists(os.path.dirname(figure_path)):
                 os.makedirs(os.path.dirname(figure_path))
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     cfg = get_cfg()
     add_vit_config(cfg)
     cfg.merge_from_file('configs/cascade/doclaynet_VGT_cascade_PTM.yaml')
-    files = glob.glob('result/micro-regis-plumber/*/pages/*')
+    files = glob.glob('result/test/*/pages/*')
     dataset = 'doclaynet'
     interesting_label = ''
 
