@@ -175,11 +175,12 @@ if __name__ == '__main__':
         print(pdf_name)
         for i, image_path in enumerate(tqdm(images)):
             img = cv2.imread(image_path)
-            grid = os.path.join(*image_path.split('/')[:-2], 'grids', os.path.basename(image_path).split('.')[0]+'.pkl')
-            page = image_path.split('/')[-1].split('.')[0]
+            directory_path = os.path.dirname(os.path.dirname(image_path))
+            grid = os.path.join(directory_path, 'grids', os.path.basename(image_path).split('.')[0]+'.pkl')
+            page = os.path.basename(image_path).split('.')[0]
 
             # load or create xml for the current pdf
-            xml_path = os.path.join(*image_path.split('/')[:-2], 'output.xml')
+            xml_path = os.path.join(directory_path, 'output.xml')
             if not os.path.exists(xml_path):
                 root = etree.Element('output')
             else:
@@ -190,8 +191,7 @@ if __name__ == '__main__':
                 output = predictor(img, grid)["instances"]
 
                 # save VGT output
-                directory_path = os.path.dirname(os.path.dirname(image_path))
-                file_name = os.path.basename(image_path).split('.png')[0] + '.pkl'
+                file_name = os.path.basename(image_path).split('.')[0] + '.pkl'
                 output_path = os.path.join(directory_path, 'outputs', file_name)
 
                 if not os.path.exists(os.path.dirname(output_path)):
