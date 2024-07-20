@@ -65,7 +65,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='script to run VGT on pdf')
     parser.add_argument('--root',
                         type=str,
-                        default='pdfs/AAPG-ALL',
+                        default='pdfs/one',
                         help='path to input directory')
 
     parser.add_argument('--dataset',
@@ -97,7 +97,7 @@ if __name__ == '__main__':
                         '-o',
                         help='output folder name',
                         type=str,
-                        default='result/AAPG-ALL')
+                        default='result/test')
 
     parser.add_argument('--grid',
                         help='tool used for creating grids: pdfplumber or mmocr',
@@ -113,11 +113,6 @@ if __name__ == '__main__':
                         help='expand bounding box by this value',
                         default=5,
                         type=int)
-
-    parser.add_argument('--preprocessed',
-                        action='store_true',
-                        help='use this to skip the preprocessing',
-                        default=False)
 
     parser.add_argument('--preprocess_only',
                         action='store_true',
@@ -137,20 +132,19 @@ if __name__ == '__main__':
 
     if not args.skip_preprocess:
         # Step 0: pdf preprocessing
-        if not args.preprocessed:
-            print('pre-processing PDFs...')
-            if args.grid == 'pdfplumber':
-                for pdf_path in tqdm(pdfs):
-                    pdf_to_images(pdf_path, args.dpi, args.output)
-                    pdf_to_grids(pdf_path, args.tokenizer, args.output)
+        print('pre-processing PDFs...')
+        if args.grid == 'pdfplumber':
+            for pdf_path in tqdm(pdfs):
+                pdf_to_images(pdf_path, args.dpi, args.output)
+                pdf_to_grids(pdf_path, args.tokenizer, args.output)
 
-            elif args.grid == 'mmocr':
-                infer = MMOCRInferencer(det='dbnetpp', rec='svtr-small')
-                for pdf_path in tqdm(pdfs):
-                    pdf_to_images(pdf_path, args.dpi, args.output)
-                    pdf_name = os.path.basename(pdf_path).split('.pdf')[0]
-                    for i, image in enumerate(glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.png'))):
-                        image_to_grids(image, args.tokenizer, infer)
+        elif args.grid == 'mmocr':
+            infer = MMOCRInferencer(det='dbnetpp', rec='svtr-small')
+            for pdf_path in tqdm(pdfs):
+                pdf_to_images(pdf_path, args.dpi, args.output)
+                pdf_name = os.path.basename(pdf_path).split('.pdf')[0]
+                for i, image in enumerate(glob.glob(os.path.join(args.output, pdf_name, 'pages', '*.png'))):
+                    image_to_grids(image, args.tokenizer, infer)
 
     assert not args.preprocess_only, 'skipping inference'
 
@@ -196,20 +190,20 @@ if __name__ == '__main__':
                 output = predictor(img, grid)["instances"]
 
                 # save VGT output
-                output_path = image_path.split('/')[:-2]
-                file_name = os.path.basename(image_path).split('.')[0] + '.pkl'
-                output_path = os.path.join(*output_path, 'outputs', file_name)
+                directory_path = os.path.dirname(os.path.dirname(image_path))
+                file_name = os.path.basename(image_path).split('.png')[0] + '.pkl'
+                output_path = os.path.join(directory_path, 'outputs', file_name)
 
                 if not os.path.exists(os.path.dirname(output_path)):
                     os.makedirs(os.path.dirname(output_path))
                 pickle.dump(output, open(output_path, 'wb'))
 
                 # prepare folders to store cropped bounding boxes from each page
-                cropped_image_dir = os.path.join(*image_path.split('/')[:-2], 'cropped_image')
+                cropped_image_dir = os.path.join(directory_path, 'cropped_image')
                 if not os.path.exists(cropped_image_dir):
                     os.makedirs(cropped_image_dir)
 
-                cropped_text_dir = os.path.join(*image_path.split('/')[:-2], 'cropped_text')
+                cropped_text_dir = os.path.join(directory_path, 'cropped_text')
                 if not os.path.exists(cropped_text_dir):
                     os.makedirs(cropped_text_dir)
 
