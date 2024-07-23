@@ -3,7 +3,7 @@ PDF Image and text extraction and pairing to generate datasets for OCR task and 
 
 ## Installation ##
 
-1. Download [VGT](https://github.com/AlibabaResearch/AdvancedLiterateMachinery/tree/main/DocumentUnderstanding/VGT) to execute document layout analysis. 
+1. Download [VGT](https://github.com/AlibabaResearch/AdvancedLiterateMachinery/tree/main/DocumentUnderstanding/VGT). 
     ```angular2html
     git clone https://github.com/AlibabaResearch/AdvancedLiterateMachinery.git
     mv AdvancedLiterateMachinery/DocumentUnderstanding/VGT/ VGT/
@@ -29,12 +29,12 @@ PDF Image and text extraction and pairing to generate datasets for OCR task and 
    sudo apt-get install git-lfs
    apt install nvidia-cuda-toolkit
    ```
-5. Install Detectron
+5. Build Detectron2 from source
    ```angular2html
    python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
    ```
 
-6. Install MMOCR
+6. Build MMOCR from source
    ```angular2html
    pip install -U openmim
    mim install mmengine

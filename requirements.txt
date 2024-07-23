@@ -23,4 +23,3 @@ tqdm
 lxml
 pymupdf
 munkres
-openmim
