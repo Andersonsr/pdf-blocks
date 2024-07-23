@@ -4,10 +4,7 @@ import numpy as np
 import pdfplumber
 import argparse
 from transformers import AutoTokenizer
-from paddleocr import PaddleOCR, draw_ocr
-from PIL import Image
 from mmocr.apis import MMOCRInferencer
-import matplotlib.pyplot as plt
 
 
 def return_word_grid(pdf_path):
@@ -103,21 +100,20 @@ def create_mmocr_grid(tokenizer, page_data):
     for bbox in pred['det_polygons']:
         grid["bbox_texts_list"].append((bbox[2], bbox[3], bbox[7] - bbox[2], bbox[6] - bbox[3]))
 
-    if len(grid['texts']) == 0:
-        return None
+    if len(grid['texts']) > 0:
+        input_ids = tokenize(tokenizer, grid["texts"])
 
-    input_ids = tokenize(tokenizer, grid["texts"])
-
-    grid["bbox_subword_list"] = np.array(
-        readjust_bbox_coords(
-            grid["bbox_texts_list"],
-            input_ids
+        grid["bbox_subword_list"] = np.array(
+            readjust_bbox_coords(
+                grid["bbox_texts_list"],
+                input_ids
+            )
         )
-    )
-    grid["bbox_texts_list"] = np.array(grid["bbox_texts_list"])
-    grid["input_ids"] = np.concatenate(input_ids)
+        grid["bbox_texts_list"] = np.array(grid["bbox_texts_list"])
+        grid["input_ids"] = np.concatenate(input_ids)
+        return grid
 
-    return grid
+    return None
 
 
 def create_grid_dict(tokenizer, page_data, ):

@@ -38,11 +38,11 @@ def save_result(image_path, conf, classes, threshold):
         cv2.imwrite(result_path, result_image)
 
 
-def extract_bbox(image_path, label, threshold, interesting_label):
+def extract_bbox(image_path, label, threshold,):
     img = cv2.imread(image_path)
     page = os.path.basename(image_path)
-    trailing = trailing = os.path.dirname(os.path.dirname(image_path))
-    output_path = os.path.join(trailing, 'outputs', page).split('.pdf')[0] + '.pkl'
+    trailing = os.path.dirname(os.path.dirname(image_path))
+    output_path = os.path.join(trailing, 'outputs', page).split('.')[0] + '.pkl'
     output = pickle.load(open(output_path, 'rb'))
     output = non_maximum_suppression(output, threshold)
 

@@ -1,11 +1,6 @@
-import glob
-import os.path
-from math import ceil, floor
 from lxml import etree
 import cv2
-import pytesseract
 import fitz
-# from paddleocr import PaddleOCR, draw_ocr
 
 
 def extract_text_intersects(pdf_path, page_num, bbox):

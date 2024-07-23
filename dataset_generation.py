@@ -1,8 +1,6 @@
 import argparse
 import os
 import glob
-import pickle
-
 from tqdm import tqdm
 from lxml import etree
 from text_image_matching import hungarian_matching

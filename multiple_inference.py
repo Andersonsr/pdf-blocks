@@ -9,8 +9,6 @@ from text_extraction import extract_text
 from create_grid import return_word_grid, select_tokenizer, create_grid_dict, create_mmocr_grid
 from VGT.object_detection.ditod import add_vit_config
 from detectron2.config import get_cfg
-from detectron2.utils.visualizer import ColorMode, Visualizer
-from detectron2.data import MetadataCatalog
 from VGT.object_detection.ditod.VGTTrainer import DefaultPredictor
 from mmocr.apis import MMOCRInferencer
 from non_max import non_maximum_suppression
@@ -18,6 +16,8 @@ from lxml import etree
 import pytesseract
 from tqdm import tqdm
 from labels import labels
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 def pdf_to_images(filename, dpi, experiment):
@@ -45,8 +45,6 @@ def image_to_grids(image_path, tokenizer, inferencer):
 
 
 def pdf_to_grids(filename, tokenizer, experiment):
-
-
     pdf_name = os.path.basename(filename).split('.pdf')[0]
     dirname = os.path.join(experiment, pdf_name, 'grids')
     if not os.path.exists(dirname):
@@ -188,7 +186,8 @@ if __name__ == '__main__':
 
             if os.path.exists(grid):
                 # run inference
-                output = predictor(img, grid)["instances"]
+                with torch.no_grad():
+                    output = predictor(img, grid)["instances"]
 
                 # save VGT output
                 file_name = os.path.basename(image_path).split('.')[0] + '.pkl'

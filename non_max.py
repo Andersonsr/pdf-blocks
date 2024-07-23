@@ -1,5 +1,4 @@
 import cv2
-import numpy as np
 from nms import nms
 import pickle
 from detectron2.structures.instances import Instances
