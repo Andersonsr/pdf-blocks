@@ -27,7 +27,6 @@ PDF Image and text extraction and pairing to generate datasets for OCR task and 
    pip install -r requirements.txt
    curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
    sudo apt-get install git-lfs
-   apt install nvidia-cuda-toolkit
    ```
 5. Build Detectron2 from source
    ```angular2html
