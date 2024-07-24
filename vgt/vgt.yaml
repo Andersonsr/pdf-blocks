@@ -1,4 +1,0 @@
-name: vgt
-channels:
-  - defaults
-prefix: /root/anaconda3/envs/vgt

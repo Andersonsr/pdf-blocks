@@ -47,7 +47,7 @@ PDF Image and text extraction and pairing to generate datasets for OCR task and 
    MMCV searches for nvcc at $CUDA_HOME/bin/nvcc.
    ```angular2html
    error: [Errno 2] No such file or directory: '/root/anaconda3/envs/tormenta/bin/nvcc'
-   ```
-   
+   ``` 
+
 ## Usage ##
 
